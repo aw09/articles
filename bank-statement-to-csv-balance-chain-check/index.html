@@ -11,37 +11,35 @@
 <time datetime="2026-10-19T14:41:18Z">2026-10-19</time>
 <h2>Why PDF-to-CSV converters fail on bank statements</h2>
 <p>A PDF has no rows and no columns. It stores glyphs at x/y coordinates plus a font. "Table" is something your eye reconstructs. A converter has to guess it back, and bank statements are the hardest possible case.</p>
-<!--CTA--><p class="cta cta-empty">No product attached yet.</p><p><strong>Wrapped descriptions.</strong> `ACH DEPOSIT / ACME PAYROLL / PP 4471` often occupies three lines, with the amount only on the last one. Converters that treat each line as a row produce two blank-amount rows and one orphan.</p>
+<!--CTA--><p class="cta cta-empty">No product attached yet.</p><p><strong>Wrapped descriptions.</strong> <code>ACH DEPOSIT / ACME PAYROLL / PP 4471</code> often occupies three lines, with the amount only on the last one. Converters that treat each line as a row produce two blank-amount rows and one orphan.</p>
 <p><strong>Two ways to show money.</strong> Some banks use separate debit and credit columns; others use a single amount column with parentheses or a trailing minus for withdrawals. Both are valid PDFs. A converter tuned to one layout silently turns withdrawals into deposits.</p>
-<p><strong>Decorations glued to numbers.</strong> Right-aligned digits, thousands separators, currency symbols, and footnote markers like `1,234.56*` that belong to a different column entirely.</p>
+<p><strong>Decorations glued to numbers.</strong> Right-aligned digits, thousands separators, currency symbols, and footnote markers like <code>1,234.56*</code> that belong to a different column entirely.</p>
 <p><strong>Repeated furniture.</strong> Every page repeats the header, the account number, and the "continued" footer. Page breaks land in the middle of a transaction. Column positions shift by a few points between pages, and guessed column boundaries drift with them.</p>
 <p><strong>Scanned statements.</strong> Plenty of banks still send image-only PDFs. No amount of column detection helps there; you need OCR, and OCR confuses 8 with 3, 0 with O, and 1 with 7 in exactly the numbers you care about.</p>
 <p>The result is a CSV that looks plausible — right number of rows, numbers in roughly the right places — and is off by a few cents in a way nobody notices until tax season.</p>
 <h2>The balance chain: the check that catches everything</h2>
 <p>Most checking and savings statements include a running balance after every transaction. That gives you arithmetic the bank itself guarantees:</p>
-<p>`previous balance + transaction amount = new balance`</p>
+<p><code>previous balance + transaction amount = new balance</code></p>
 <p>Every row. No exceptions. If your CSV breaks that equation, the CSV is wrong, no matter how clean it looks. This is the most useful test in statement extraction because it is self-referential: you do not need the original PDF, a second source, or trust in the converter.</p>
 <p>You also get a statement-level check:</p>
-<p>`opening balance + sum of all amounts = closing balance`</p>
+<p><code>opening balance + sum of all amounts = closing balance</code></p>
 <p>That one catches missing and duplicated rows, which the row-level chain can miss when a whole transaction vanishes cleanly.</p>
 <p>Two caveats. Credit cards usually have no running balance column, so use the statement summary instead: previous balance + purchases − payments = new balance. And the chain is order-dependent. Banks post same-day transactions in a specific sequence; sorting by date alone can shuffle them and produce a break that is not a data error.</p>
 <h2>How to run the check yourself in five minutes</h2>
 <p><strong>1. Extract with layout, not with a table guesser.</strong> From a terminal:</p>
-<p>`pdftotext -layout statement.pdf statement.txt`</p>
-<p>The `-layout` flag preserves horizontal positions, which is all you need to rebuild columns yourself. Poppler's pdftotext is free; pdfplumber does the same in Python with coordinates attached.</p>
+<p><code>pdftotext -layout statement.pdf statement.txt</code></p>
+<p>The <code>-layout</code> flag preserves horizontal positions, which is all you need to rebuild columns yourself. Poppler's pdftotext is free; pdfplumber does the same in Python with coordinates attached.</p>
 <p><strong>2. Keep statement order.</strong> Do not sort. Preserve the order rows appear on the page.</p>
-<p><strong>3. Normalize the amounts.</strong> Strip `$` and commas, convert `(1,234.56)` and `1,234.56-` to `-1234.56`. Do this once at import, not inside your formulas.</p>
+<p><strong>3. Normalize the amounts.</strong> Strip <code>$</code> and commas, convert <code>(1,234.56)</code> and <code>1,234.56-</code> to <code>-1234.56</code>. Do this once at import, not inside your formulas.</p>
 <p><strong>4. Walk the chain.</strong> In Python:</p>
-<p>```python
-prev = None
+<pre><code class="lang-python">prev = None
 for r in rows:                      # statement order, not sorted
     if prev is not None:
-        expected = prev["balance"] + r["amount"]
-        assert abs(expected - r["balance"]) &lt; 0.01, (prev, r)
+        expected = prev[&quot;balance&quot;] + r[&quot;amount&quot;]
+        assert abs(expected - r[&quot;balance&quot;]) &lt; 0.01, (prev, r)
     prev = r
-assert abs(opening + rows[0]["amount"] - rows[0]["balance"]) &lt; 0.01
-```</p>
-<p>In a spreadsheet, the same idea: a helper column `=ROUND(prev_balance + amount - balance, 2)` that should read 0 all the way down. Filter for anything else.</p>
+assert abs(opening + rows[0][&quot;amount&quot;] - rows[0][&quot;balance&quot;]) &lt; 0.01</code></pre>
+<p>In a spreadsheet, the same idea: a helper column <code>=ROUND(prev_balance + amount - balance, 2)</code> that should read 0 all the way down. Filter for anything else.</p>
 <p><strong>5. Read the first failure, not all of them.</strong> One bad row throws off every row after it, so the first nonzero is the only real error. Typical causes: a wrapped description split into two rows, a sign flip on a withdrawal, or a page-break row that merged a footer into a transaction.</p>
 <p><strong>6. If the break lands on a page boundary,</strong> the problem is furniture, not arithmetic. Delete repeated headers and footers, then rerun.</p>
 <p>If the chain reconciles to the cent and the closing balance matches, the CSV is correct. If it does not, you know exactly which row to look at — which is far more than any converter will tell you.</p>
