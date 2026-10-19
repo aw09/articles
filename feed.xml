@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<rss version="2.0"><channel><title>Articles</title><link>https://aw09.github.io/articles</link>
+<description>Latest articles</description><item><title>Bank Statement to CSV: Why Converters Fail and How to Verify</title><link>https://aw09.github.io/articles/bank-statement-to-csv-balance-chain-check/</link>
+<guid>https://aw09.github.io/articles/bank-statement-to-csv-balance-chain-check/</guid><pubDate>2026-10-19T14:41:18Z</pubDate>
+<description>Converters break on bank statements because PDFs have no table structure. Here is why, plus a five-minute balance-chain check you can run yourself.</description></item><item><title>PDF Tools People Actually Search For (and When to Use Them)</title><link>https://aw09.github.io/articles/pdf-tools-people-actually-search-for/</link>
+<guid>https://aw09.github.io/articles/pdf-tools-people-actually-search-for/</guid><pubDate>2026-10-17T22:58:17Z</pubDate>
+<description>The PDF tools people search for most, what each one does, and the fastest way to merge, split, compress, convert, sign, and OCR a file without paying.</description></item></channel></rss>

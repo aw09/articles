@@ -1,0 +1,41 @@
+name: publish-site
+
+# GitHub Pages deploy for the article pipeline output.
+#
+# Why a custom Actions workflow and not the built-in Pages builder: the Pages docs state the
+# "soft limit of 10 builds per hour ... does not apply if you build and publish your site with a
+# custom GitHub Actions workflow". The site is already fully built by text_pipeline.py (plain
+# HTML + RSS, no framework), so this workflow only uploads and deploys — it does not build content.
+#
+# Terms note: GitHub's Actions terms restrict hosted runners to activity "related to the production,
+# testing, deployment, or publication of the software project associated with the repository".
+# Deploying this repo's own site is exactly that. Do not add unrelated rendering jobs here.
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  pages: write
+  id-token: write
+
+concurrency:
+  group: pages
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    environment:
+      name: github-pages
+      url: ${{ steps.deployment.outputs.page_url }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/configure-pages@v5
+      - uses: actions/upload-pages-artifact@v3
+        with:
+          path: .
+      - id: deployment
+        uses: actions/deploy-pages@v4
